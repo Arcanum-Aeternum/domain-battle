@@ -1,0 +1,17 @@
+# environments and secrets
+.environments
+.env
+
+# version of the used tools
+.tool-versions
+poetry.lock
+
+# linters / code analysers
+.mypy_cache
+
+# python
+**/__pycache__
+**/.pytest_cache
+
+# IDEs
+.vscode

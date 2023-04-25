@@ -1,0 +1,60 @@
+[tool.poetry]
+name = "death-march"
+version = "0.1.0"
+description = "Rpg game inspired on anime Death March to the Parallel World Rhapsody"
+authors = ["MrAbade <vini.abade@outlook.com.br>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "death_march"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+[tool.poetry.group.dev.dependencies]
+isort = "^5.12.0"
+black = "^23.3.0"
+mypy = "^1.1.1"
+pylint = "^2.17.1"
+flake8 = "^6.0.0"
+ipython = "^8.12.0"
+pytest = "^7.2.2"
+
+[build-system]
+requires = ["poetry-core>=1.5.2"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+disallow_untyped_defs = "True"
+ignore_missing_imports = "True"
+check_untyped_defs = "true"
+disallow_incomplete_defs = "true"
+no_implicit_optional = "true"
+no_implicit_reexport = "true"
+strict_equality = "true"
+warn_redundant_casts = "true"
+warn_unused_ignores = "true"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests"]
+testpaths = ["tests", "src"]
+
+[tool.pylint]
+init-hook = "import sys; sys.path.append('./src'), sys.path.append('./tests')"
+fail-under = "9.5"
+
+[tool.pylint.format]
+max-line-length = "120"
+
+[tool.pylint.messages_control]
+disable = ["C0114", "C0116", "C0301", "C0103", "R0903", "W1203", "W0621", "W0221", "W0212", "W0707", "W0201", "W0231"]
+
+[tool.pylint.similarities]
+ignore-imports = "yes"
+min-similarity-lines = "6"
+
+[tool.isort]
+profile = "black"
+line_length = 120
+
+[tool.black]
+line-length = 120
