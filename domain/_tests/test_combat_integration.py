@@ -3,8 +3,8 @@ from typing import Callable
 import pytest
 
 from domain.character.entity import Character
-from domain.character.interfaces import ICharacter
 from domain.character.exceptions import ThisCharacterDoesNotHaveThatSpell
+from domain.character.interfaces import ICharacter
 from domain.character_spell.entity import CharacterSpell
 from domain.character_spell.interfaces import ICharacterSpell
 from domain.duel.entity import Duel
