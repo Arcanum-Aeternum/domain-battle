@@ -2,9 +2,11 @@ from typing import Callable
 
 import pytest
 
-from domain.character.entity import Character, ICharacter
+from domain.character.entity import Character
+from domain.character.interfaces import ICharacter
 from domain.character.exceptions import ThisCharacterDoesNotHaveThatSpell
-from domain.character_spell.entity import CharacterSpell, ICharacterSpell
+from domain.character_spell.entity import CharacterSpell
+from domain.character_spell.interfaces import ICharacterSpell
 from domain.duel.entity import Duel
 from domain.duel.exceptions import DuelIsNotHappeningException
 from domain.interfaces import IEntityID
