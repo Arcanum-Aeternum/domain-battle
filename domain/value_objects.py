@@ -9,32 +9,28 @@ class EntityID(IEntityID, uuid.UUID):
     """Represents a value object specialized in working with entity IDs.
 
     It is capable of generating unique IDs, whether or not based on the namespace.
-    : fonte_unica = None
-        Utiliza o algoritmo uuid4 para gerar um ID pseudoaleatorio
-    : fonte_unica = <str>
-        Utiliza o algoritmo uuid5 (SHA-1) para gerar um ID pseudoaleatorio recuperavel.
-        Nesse caso o ID pode ser recuperado utilizando sua fonte (fonte_unica)
-    : uuid_string = <str>
-        Utiliza o uuid string como base para criacao deste ID
+    : unique_font = None
+        Uses the uuid4 algorithm to generate a pseudorandom ID
+    : unique_font = <str>
+        Uses the uuid5 (SHA-1) algorithm to generate a retrievable pseudo-random ID.
+        In this case the ID can be retrieved using its source (unique_source)
 
-    Quando instanciar esta classe com um parametro de namespace, certifique-se de
-    utilizar uma fonte_unica, ou seja, apenas em casos os quais estiver trabalhando
-    com entidades que tenham atributos unicos, como numero de celular, ou cpf, dessa forma,
-    o algoritmo SHA-1 sempre entregara hashs com uma probabilidade infema de colisao!
+    When instantiating this class with a namespace parameter, be sure to
+    use a single_source, that is, only in cases that you are working on
+    with entities that have unique attributes, such as cell phone number, or ID, in this way,
+    the SHA-1 algorithm will always deliver hashes with an infamous collision probability!
     """
 
-    def __init__(self, fonte_unica: str | None = None, uuid_string: str | None = None):
-        if fonte_unica is not None:
-            super().__init__(str(uuid.uuid5(uuid.NAMESPACE_DNS, fonte_unica)), version=5)
-        elif uuid_string is not None:
-            super().__init__(uuid_string)
+    def __init__(self, *, unique_font: str | None = None):
+        if unique_font is not None:
+            super().__init__(str(uuid.uuid5(uuid.NAMESPACE_DNS, unique_font)), version=5)
         else:
             super().__init__(str(uuid.uuid4()), version=4)
 
     def __eq__(self, entity_id: object) -> bool:
         if not isinstance(entity_id, EntityID):
             return False
-        return super().__eq__(entity_id)
+        return self.hex == entity_id.hex
 
     def __mul__(self, quantidade_de_instancias: int) -> Tuple["EntityID", ...]:
         return tuple(EntityID() for _ in range(quantidade_de_instancias))
@@ -43,4 +39,4 @@ class EntityID(IEntityID, uuid.UUID):
         return tuple(EntityID() for _ in range(quantidade_de_instancias))
 
     def __hash__(self) -> int:
-        return super().__hash__()
+        return hash(str(self))

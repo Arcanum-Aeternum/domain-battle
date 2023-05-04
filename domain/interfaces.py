@@ -35,7 +35,7 @@ class Entity(metaclass=ABCMeta):
     def __ne__(self, other: object) -> bool:
         if not isinstance(other, Entity):
             return False
-        return self == other
+        return not self == other
 
 
 class AggregateRoot(Entity, metaclass=ABCMeta):
