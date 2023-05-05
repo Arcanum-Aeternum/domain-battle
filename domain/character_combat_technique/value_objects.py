@@ -3,20 +3,20 @@ from copy import copy
 from domain.interfaces import ValueObject
 
 from .exceptions import (
+    CombatTechniqueIsAlreadyReady,
+    CombatTechniqueIsNotReady,
     InvalidCooldownRange,
     InvalidDamageRange,
     InvalidLoadingTimeRange,
     InvalidManaCostRange,
-    SpellIsAlreadyReady,
-    SpellIsNotReady,
 )
 
 
-class SpellProfile(ValueObject):
+class CombatTechniqueProfile(ValueObject):
     """Class that represents a value object of spell profile to the CharacterSpell"""
 
-    def __init__(self, mana_cost: int, damage: int, cooldown: int, loading_time: int = 0) -> None:
-        if mana_cost < 0 or mana_cost > 100:
+    def __init__(self, stamina_cost: int, damage: int, cooldown: int, loading_time: int = 0) -> None:
+        if stamina_cost < 0 or stamina_cost > 100:
             raise InvalidManaCostRange()
         if damage < 0 or damage > 100:
             raise InvalidDamageRange()
@@ -24,24 +24,24 @@ class SpellProfile(ValueObject):
             raise InvalidCooldownRange()
         if loading_time > cooldown:
             raise InvalidLoadingTimeRange()
-        self.__mana_cost = mana_cost
+        self.__stamina_cost = stamina_cost
         self.__damage = damage
         self.__cooldown = cooldown
         self.__loading_time = loading_time
 
     def start_loading_time(self) -> None:
         if self.__loading_time != 0:
-            raise SpellIsNotReady()
+            raise CombatTechniqueIsNotReady()
         self.__loading_time = copy(self.__cooldown)
 
-    def load_spell(self) -> None:
+    def rest_and_prepare(self) -> None:
         if self.__loading_time == 0:
-            raise SpellIsAlreadyReady()
+            raise CombatTechniqueIsAlreadyReady()
         self.__loading_time -= 1
 
     @property
-    def get_mana_cost(self) -> int:
-        return self.__mana_cost
+    def get_stamina_cost(self) -> int:
+        return self.__stamina_cost
 
     @property
     def get_damage(self) -> int:
