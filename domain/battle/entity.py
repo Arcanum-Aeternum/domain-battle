@@ -1,15 +1,15 @@
-"""Module describes the Duel root entity and its direct dependencies"""
+"""Module describes the Battle root entity and its direct dependencies"""
 from typing import Callable
 
 from domain.character.interfaces import ICharacter
 from domain.interfaces import AggregateRoot
 from domain.value_objects import EntityID
 
-from .exceptions import DuelIsAlreadyHappeningException, DuelIsNotHappeningException
+from .exceptions import BattleIsAlreadyHappeningException, BattleIsNotHappeningException
 
 
-class Duel(AggregateRoot):
-    """Class that represents a Duel entity, which is the aggregate root"""
+class Battle(AggregateRoot):
+    """Class that represents a Battle entity, which is the aggregate root"""
 
     def __init__(
         self,
@@ -27,34 +27,34 @@ class Duel(AggregateRoot):
     def is_current_player(self, *, player: ICharacter) -> bool:
         return self.__players[self.__current_player] == player
 
-    def init_duel(self) -> None:
-        """Changes attribute if it has not yet been started, indicating the start of the duel"""
+    def init_battle(self) -> None:
+        """Changes attribute if it has not yet been started, indicating the start of the Battle"""
         if self.__is_happening:
-            raise DuelIsAlreadyHappeningException()
+            raise BattleIsAlreadyHappeningException()
         self.__is_happening = True
 
     def play(self, *, playing: Callable[[ICharacter, ICharacter], None]) -> None:
         """Pass the turn to the other player"""
         if not self.__is_happening:
-            raise DuelIsNotHappeningException()
+            raise BattleIsNotHappeningException()
         current_player = self.__players[self.__current_player]
         next_player = self.__players[(self.__current_player + 1) % 2]
         playing(current_player, next_player)
         self.__current_player = (self.__current_player + 1) % 2
 
     def finish_duel(self, *, reason_for_ending: str) -> None:
-        """Ends the duel if the same is happening, indicating its end"""
+        """Ends the Battle if the same is happening, indicating its end"""
         if not self.__is_happening:
-            raise DuelIsNotHappeningException()
+            raise BattleIsNotHappeningException()
         self.__is_happening = False
         self.__reason_for_ending = reason_for_ending
 
     def __str__(self) -> str:
         if self.__is_happening:
-            return f"""<Duel(
+            return f"""<{self.__class__.__name__}(
                 id={self.entity_id},
                 players={str(self.__players)},
                 current_player={self.__players[self.__current_player]}
             )>
             """
-        return f"<Duel(id={self.entity_id}, reason_for_ending={self.__reason_for_ending})>"
+        return f"<{self.__class__.__name__}(id={self.entity_id}, reason_for_ending={self.__reason_for_ending})>"
