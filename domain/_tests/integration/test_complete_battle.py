@@ -63,30 +63,49 @@ def test_complete_battle() -> None:
     combat_technique_seed = 15
     neryo_tchagui = create_fake_character_combat_techniques(name="Neryo Tchagui", seed=combat_technique_seed)
     mondolio_tchagui = create_fake_character_combat_techniques(name="Mondolio Tchagui", seed=combat_technique_seed)
+    jab_punch = create_fake_character_combat_techniques(name="Jab Punch", seed=combat_technique_seed)
+    direct_punch = create_fake_character_combat_techniques(name="Direct Punch", seed=combat_technique_seed)
+    cross_punch = create_fake_character_combat_techniques(name="Cross Punch", seed=combat_technique_seed)
     spell_seed = 15
     hadouken = create_fake_character_spell(name="Hadouken", seed=spell_seed)
     shoryuken = create_fake_character_spell(name="Shoryuken", seed=spell_seed)
+    shoot_spider_web = create_fake_character_spell(name="Shoot Spider Web", seed=spell_seed)
 
-    player1 = create_fake_character(
+    character1 = create_fake_character(
         name="John Wick",
         combat_techniques=(neryo_tchagui, mondolio_tchagui),
         spells=(hadouken, shoryuken),
     )
-    player2 = create_fake_character(
+    character2 = create_fake_character(
         name="Spider Man",
         combat_techniques=(neryo_tchagui,),
         spells=(hadouken,),
     )
-    player3 = create_fake_character(name="Spider Man")
+    character3 = create_fake_character(
+        name="Spider Man",
+        spells=(shoot_spider_web,),
+    )
+    character4 = create_fake_character(
+        name="Rocky Balboa",
+        combat_techniques=(jab_punch, direct_punch, cross_punch),
+    )
 
     with pytest.raises(ThisCharacterDoesNotHaveThatSpell):
-        player3.cast_spell(spell_id=hadouken.entity_id, target_character=player2)
+        character3.cast_spell(spell_id=hadouken.entity_id, target_character=character2)
 
     with pytest.raises(ThisCharacterDoesNotHaveThatCombatTechnique):
-        player3.apply_combat_technique(combat_technique_id=neryo_tchagui.entity_id, target_character=player2)
+        character3.apply_combat_technique(combat_technique_id=neryo_tchagui.entity_id, target_character=character2)
 
-    battle = Battle(entity_id=EntityID(), players=(player1, player2))
-    assert battle.is_current_player(player=player1)
+    team1 = Team(characters=(character1, character2))
+    team2 = Team(characters=(character3, character4))
+    battle = (
+        Battle(entity_id=EntityID())
+        .pass_turn_algorithm(PassTurnAlgorithm.REGULAR_CIRCULAR_QUEUE)
+        .add_battle_allies(teams=(team1,))
+        .add_battle_allies(teams=(team2,))
+        .init_battle()
+    )
+    assert battle.is_current_player(player=character1)
 
     def simulate_playing(
         combat_technique_id: IEntityID, spell_id: IEntityID
@@ -97,12 +116,8 @@ def test_complete_battle() -> None:
 
         return playing
 
-    with pytest.raises(BattleIsNotHappeningException):
-        battle.play(playing=simulate_playing(neryo_tchagui.entity_id, hadouken.entity_id))
-
-    battle.init_battle()
     battle.play(playing=simulate_playing(neryo_tchagui.entity_id, hadouken.entity_id))
-    assert battle.is_current_player(player=player2)
-    assert player1.get_current_stamina_points == MAXIMUS_POINTS - combat_technique_seed
-    assert player1.get_current_mana_points == MAXIMUS_POINTS - spell_seed
-    assert player2.get_current_life_points == MAXIMUS_POINTS - (spell_seed + combat_technique_seed)
+    assert battle.is_current_player(player=character2)
+    assert character1.get_current_stamina_points == MAXIMUS_POINTS - combat_technique_seed
+    assert character1.get_current_mana_points == MAXIMUS_POINTS - spell_seed
+    assert character1.get_current_life_points == MAXIMUS_POINTS - (spell_seed + combat_technique_seed)
