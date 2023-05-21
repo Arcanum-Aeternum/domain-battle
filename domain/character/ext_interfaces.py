@@ -6,9 +6,7 @@ from domain.interfaces import IEntityID
 class IExpectedCharacterCombatTechnique(metaclass=ABCMeta):
     """Interface that defines the public methods that Character expects to find in CharacterCombatTechnique"""
 
-    @abstractmethod
-    def __init__(self) -> None:
-        self.entity_id: IEntityID
+    entity_id: IEntityID
 
     @property
     @abstractmethod
@@ -37,9 +35,7 @@ class IExpectedCharacterCombatTechnique(metaclass=ABCMeta):
 class IExpectedCharacterSpell(metaclass=ABCMeta):
     """Interface that defines the public methods that Character expects to find in CharacterSpell"""
 
-    @abstractmethod
-    def __init__(self) -> None:
-        self.entity_id: IEntityID
+    entity_id: IEntityID
 
     @property
     @abstractmethod

@@ -1,45 +1,31 @@
 """Module describes the CharacterSpell entity and its direct dependencies"""
-from abc import ABCMeta, abstractmethod
-from functools import partial
 from typing import Callable
+from domain.interfaces import Entity
 
 from domain.value_objects import EntityID
 
-from .interfaces import ICharacterCombatTechnique
+from .interfaces import ICharacterCombatTechnique, ICombatTechniqueProfileBuilder
 from .value_objects import CombatTechniqueProfile
 
 
-class ICombatTechniqueProfileBuilder(metaclass=ABCMeta):
-    """Interface that defines an easy way to create a CharacterCombatTechnique with its CombatTechniqueProfile"""
-
-    @abstractmethod
-    def specify_combat_technique_properties(
-        self,
-        *,
-        stamina_cost: int,
-        damage: int,
-        cooldown: int,
-        loading_time: int = 0,
-    ) -> ICharacterCombatTechnique:
-        ...
-
-
-class CharacterCombatTechnique(ICharacterCombatTechnique):
+class CharacterCombatTechnique(Entity, ICharacterCombatTechnique):
     """Class that represents a CharacterCombatTechnique entity"""
 
     def __init__(self) -> None:
         raise RuntimeError("Cannot instantiate directly")
 
-    def _init(self, entity_id: EntityID, name: str, combat_technique_profile: CombatTechniqueProfile) -> None:
+    def _init(self, entity_id: EntityID, name: str) -> None:
         super().__init__(entity_id)
         self.__name = name
+
+    def _set_combat_technique_profile(self, combat_technique_profile: CombatTechniqueProfile) -> None:
         self.__combat_technique_profile = combat_technique_profile
 
     @classmethod
     def create_new(cls, *, entity_id: EntityID, name: str) -> ICombatTechniqueProfileBuilder:
         new_character_spell = cls.__new__(cls)
-        set_spell_profile = partial(new_character_spell._init, entity_id, name)
-        return _SpellProfileBuilder(new_character_spell, set_spell_profile)
+        new_character_spell._init(entity_id, name)
+        return _SpellProfileBuilder(new_character_spell, new_character_spell._set_combat_technique_profile)
 
     @property
     def get_name(self) -> str:

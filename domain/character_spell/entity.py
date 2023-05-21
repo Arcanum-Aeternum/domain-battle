@@ -1,45 +1,31 @@
 """Module describes the CharacterSpell entity and its direct dependencies"""
-from abc import ABCMeta, abstractmethod
-from functools import partial
 from typing import Callable
+from domain.interfaces import Entity
 
 from domain.value_objects import EntityID
 
-from .interfaces import ICharacterSpell
+from .interfaces import ICharacterSpell, ISpellProfileBuilder
 from .value_objects import SpellProfile
 
 
-class ISpellProfileBuilder(metaclass=ABCMeta):
-    """Interface that defines an easy way to create a CharacterSpell with its SpellProfile"""
-
-    @abstractmethod
-    def specify_spell_properties(
-        self,
-        *,
-        mana_cost: int,
-        damage: int,
-        cooldown: int,
-        loading_time: int = 0,
-    ) -> ICharacterSpell:
-        ...
-
-
-class CharacterSpell(ICharacterSpell):
+class CharacterSpell(Entity, ICharacterSpell):
     """Class that represents a CharacterSpell entity"""
 
     def __init__(self) -> None:
         raise RuntimeError("Cannot instantiate directly")
 
-    def _init(self, entity_id: EntityID, name: str, spell_profile: SpellProfile) -> None:
+    def _init(self, entity_id: EntityID, name: str) -> None:
         super().__init__(entity_id)
         self.__name = name
+
+    def _set_spell_profile(self, spell_profile: SpellProfile) -> None:
         self.__spell_profile = spell_profile
 
     @classmethod
     def create_new(cls, *, entity_id: EntityID, name: str) -> ISpellProfileBuilder:
         new_character_spell = cls.__new__(cls)
-        set_spell_profile = partial(new_character_spell._init, entity_id, name)
-        return _SpellProfileBuilder(new_character_spell, set_spell_profile)
+        new_character_spell._init(entity_id, name)
+        return _SpellProfileBuilder(new_character_spell, new_character_spell._set_spell_profile)
 
     @property
     def get_name(self) -> str:
