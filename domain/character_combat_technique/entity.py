@@ -1,8 +1,7 @@
 """Module describes the CharacterSpell entity and its direct dependencies"""
 from typing import Callable
-from domain.interfaces import Entity
 
-from domain.value_objects import EntityID
+from domain.interfaces import Entity, IEntityID
 
 from .interfaces import ICharacterCombatTechnique, ICombatTechniqueProfileBuilder
 from .value_objects import CombatTechniqueProfile
@@ -14,7 +13,7 @@ class CharacterCombatTechnique(Entity, ICharacterCombatTechnique):
     def __init__(self) -> None:
         raise RuntimeError("Cannot instantiate directly")
 
-    def _init(self, entity_id: EntityID, name: str) -> None:
+    def _init(self, entity_id: IEntityID, name: str) -> None:
         super().__init__(entity_id)
         self.__name = name
 
@@ -22,7 +21,7 @@ class CharacterCombatTechnique(Entity, ICharacterCombatTechnique):
         self.__combat_technique_profile = combat_technique_profile
 
     @classmethod
-    def create_new(cls, *, entity_id: EntityID, name: str) -> ICombatTechniqueProfileBuilder:
+    def create_new(cls, *, entity_id: IEntityID, name: str) -> ICombatTechniqueProfileBuilder:
         new_character_spell = cls.__new__(cls)
         new_character_spell._init(entity_id, name)
         return _SpellProfileBuilder(new_character_spell, new_character_spell._set_combat_technique_profile)

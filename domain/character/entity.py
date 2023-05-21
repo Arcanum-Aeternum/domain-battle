@@ -1,4 +1,3 @@
-from domain.character.interfaces import ICharacter
 from domain.interfaces import Entity, IEntityID
 
 from .exceptions import ThisCharacterDoesNotHaveThatCombatTechnique, ThisCharacterDoesNotHaveThatSpell
