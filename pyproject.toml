@@ -47,7 +47,7 @@ fail-under = "9.5"
 max-line-length = "120"
 
 [tool.pylint.messages_control]
-disable = ["C0114", "C0116", "C0301", "C0103", "R0903", "W1203", "W0621", "W0221", "W0212", "W0707", "W0201", "W0231"]
+disable = ["C0114", "C0116", "C0301", "C0103", "R0801", "R0903", "W1203", "W0621", "W0221", "W0212", "W0707", "W0201", "W0231"]
 
 [tool.pylint.similarities]
 ignore-imports = "yes"
