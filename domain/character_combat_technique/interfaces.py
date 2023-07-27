@@ -1,14 +1,39 @@
 from abc import ABCMeta, abstractmethod
 
-from domain.character import IExpectedCharacterCombatTechnique
 from domain.interfaces import IEntityID
 
 
-class ICharacterCombatTechnique(IExpectedCharacterCombatTechnique, metaclass=ABCMeta):
-    """Interface that define the public methods of CharacterCombatTechnique with exception of factory methods"""
+class ICharacterCombatTechniquePublicMethods(metaclass=ABCMeta):
+    """Interface that defines the public methods in CharacterCombatTechnique"""
+
+    entity_id: IEntityID
+
+    @property
+    @abstractmethod
+    def name(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def is_ready(self) -> bool:
+        ...
+
+    @property
+    @abstractmethod
+    def damage(self) -> int:
+        ...
+
+    @property
+    @abstractmethod
+    def stamina_cost(self) -> int:
+        ...
 
     @abstractmethod
-    def create_new(self, *, entity_id: IEntityID, name: str) -> "ICombatTechniqueProfileBuilder":
+    def apply_combat_technique(self) -> None:
+        ...
+
+    @abstractmethod
+    def rest_and_prepare(self) -> None:
         ...
 
 
@@ -18,10 +43,17 @@ class ICombatTechniqueProfileBuilder(metaclass=ABCMeta):
     @abstractmethod
     def specify_combat_technique_properties(
         self,
-        *,
         stamina_cost: int,
         damage: int,
         cooldown: int,
         loading_time: int = 0,
-    ) -> ICharacterCombatTechnique:
+    ) -> ICharacterCombatTechniquePublicMethods:
+        ...
+
+
+class ICharacterCombatTechnique(metaclass=ABCMeta):
+    """Interface that define the factory methods of CharacterCombatTechnique"""
+
+    @abstractmethod
+    def create_new(self, *, entity_id: IEntityID, name: str) -> ICombatTechniqueProfileBuilder:
         ...

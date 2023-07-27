@@ -3,11 +3,11 @@ from typing import Callable
 
 from domain.interfaces import Entity, IEntityID
 
-from .interfaces import ICharacterSpell, ISpellProfileBuilder
+from .interfaces import ICharacterSpell, ICharacterSpellPublicMethods, ISpellProfileBuilder
 from .value_objects import SpellProfile
 
 
-class CharacterSpell(Entity, ICharacterSpell):
+class CharacterSpell(Entity, ICharacterSpell, ICharacterSpellPublicMethods):
     """Class that represents a CharacterSpell entity"""
 
     def __init__(self) -> None:
@@ -27,15 +27,19 @@ class CharacterSpell(Entity, ICharacterSpell):
         return _SpellProfileBuilder(new_character_spell, new_character_spell._set_spell_profile)
 
     @property
-    def get_name(self) -> str:
+    def name(self) -> str:
         return self.__name
 
     @property
-    def get_damage(self) -> int:
+    def is_ready(self) -> bool:
+        return self.__spell_profile.is_ready
+
+    @property
+    def damage(self) -> int:
         return self.__spell_profile.get_damage
 
     @property
-    def get_mana_cost(self) -> int:
+    def mana_cost(self) -> int:
         return self.__spell_profile.get_mana_cost
 
     def cast_spell(self) -> None:
@@ -56,7 +60,6 @@ class _SpellProfileBuilder(ISpellProfileBuilder):
 
     def specify_spell_properties(
         self,
-        *,
         mana_cost: int,
         damage: int,
         cooldown: int,

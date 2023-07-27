@@ -3,11 +3,15 @@ from typing import Callable
 
 from domain.interfaces import Entity, IEntityID
 
-from .interfaces import ICharacterCombatTechnique, ICombatTechniqueProfileBuilder
+from .interfaces import (
+    ICharacterCombatTechnique,
+    ICharacterCombatTechniquePublicMethods,
+    ICombatTechniqueProfileBuilder,
+)
 from .value_objects import CombatTechniqueProfile
 
 
-class CharacterCombatTechnique(Entity, ICharacterCombatTechnique):
+class CharacterCombatTechnique(Entity, ICharacterCombatTechnique, ICharacterCombatTechniquePublicMethods):
     """Class that represents a CharacterCombatTechnique entity"""
 
     def __init__(self) -> None:
@@ -27,16 +31,20 @@ class CharacterCombatTechnique(Entity, ICharacterCombatTechnique):
         return _SpellProfileBuilder(new_character_spell, new_character_spell._set_combat_technique_profile)
 
     @property
-    def get_name(self) -> str:
+    def name(self) -> str:
         return self.__name
 
     @property
-    def get_damage(self) -> int:
-        return self.__combat_technique_profile.get_damage
+    def is_ready(self) -> bool:
+        return self.__combat_technique_profile.is_ready
 
     @property
-    def get_stamina_cost(self) -> int:
-        return self.__combat_technique_profile.get_stamina_cost
+    def damage(self) -> int:
+        return self.__combat_technique_profile.damage
+
+    @property
+    def stamina_cost(self) -> int:
+        return self.__combat_technique_profile.stamina_cost
 
     def apply_combat_technique(self) -> None:
         self.__combat_technique_profile.start_loading_time()
@@ -56,12 +64,11 @@ class _SpellProfileBuilder(ICombatTechniqueProfileBuilder):
 
     def specify_combat_technique_properties(
         self,
-        *,
         stamina_cost: int,
         damage: int,
         cooldown: int,
         loading_time: int = 0,
-    ) -> CharacterCombatTechnique:
+    ) -> ICharacterCombatTechniquePublicMethods:
         spell_profile = CombatTechniqueProfile(
             stamina_cost=stamina_cost,
             damage=damage,
