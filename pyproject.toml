@@ -9,6 +9,8 @@ packages = [{include = "death_march"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
+trio = "^0.22.2"
+pytest-trio = "^0.8.0"
 
 [tool.poetry.group.dev.dependencies]
 isort = "^5.12.0"
