@@ -28,16 +28,21 @@ class SpellProfile(ValueObject):
         self.__damage = damage
         self.__cooldown = cooldown
         self.__loading_time = loading_time
+        self.__just_used = False
 
     def start_loading_time(self) -> None:
         if self.__loading_time != 0:
             raise SpellIsNotReady()
         self.__loading_time = copy(self.__cooldown)
+        self.__just_used = True
 
     def load_spell(self) -> None:
         if self.__loading_time == 0:
             raise SpellIsAlreadyReady()
-        self.__loading_time -= 1
+        if not self.__just_used:
+            self.__loading_time -= 1
+        else:
+            self.__just_used = False
 
     @property
     def get_mana_cost(self) -> int:

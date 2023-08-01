@@ -28,27 +28,32 @@ class CombatTechniqueProfile(ValueObject):
         self.__damage = damage
         self.__cooldown = cooldown
         self.__loading_time = loading_time
+        self.__just_used = False
 
     def start_loading_time(self) -> None:
         if self.__loading_time != 0:
             raise CombatTechniqueIsNotReady()
         self.__loading_time = copy(self.__cooldown)
+        self.__just_used = True
 
     def rest_and_prepare(self) -> None:
         if self.__loading_time == 0:
             raise CombatTechniqueIsAlreadyReady()
-        self.__loading_time -= 1
+        if not self.__just_used:
+            self.__loading_time -= 1
+        else:
+            self.__just_used = False
 
     @property
-    def get_stamina_cost(self) -> int:
+    def stamina_cost(self) -> int:
         return self.__stamina_cost
 
     @property
-    def get_damage(self) -> int:
+    def damage(self) -> int:
         return self.__damage
 
     @property
-    def get_cooldown(self) -> int:
+    def cooldown(self) -> int:
         return self.__cooldown
 
     @property
