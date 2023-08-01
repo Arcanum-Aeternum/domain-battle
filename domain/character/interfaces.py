@@ -55,7 +55,7 @@ class ICharacterPublicMethods(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    def rest(self) -> None:
+    async def rest(self) -> None:
         ...
 
     @abstractmethod
