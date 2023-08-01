@@ -1,123 +1,95 @@
-from typing import Callable
+from contextlib import suppress
+from functools import partial
 
 import pytest
 
-from domain.battle.entity import Battle
+from domain._tests.fakes import (
+    fake_battle,
+    fake_battle_allies,
+    fake_character,
+    fake_character_combat_technique,
+    fake_character_spell,
+    fake_team,
+)
+from domain.battle.events.events import CharacterLostBattleEvent, CharacterWonBattleEvent
 from domain.battle.exceptions import BattleIsNotHappeningException
-from domain.character.entity import Character
+from domain.battle.value_objects import PassTurnAlgorithmEnum
+from domain.battle_event_dispatcher import BattleEventDispatcher
+from domain.character import Character, ICharacterPublicMethods
 from domain.character.exceptions import ThisCharacterDoesNotHaveThatCombatTechnique, ThisCharacterDoesNotHaveThatSpell
-from domain.character.interfaces import ICharacter
-from domain.character_combat_technique.entity import CharacterCombatTechnique
-from domain.character_combat_technique.interfaces import ICharacterCombatTechnique
-from domain.character_spell.entity import CharacterSpell
-from domain.character_spell.interfaces import ICharacterSpell
-from domain.interfaces import IEntityID
-from domain.value_objects import EntityID
-
-MAXIMUS_POINTS = 100
+from domain.character_combat_technique import CharacterCombatTechnique
+from domain.character_spell import CharacterSpell
 
 
-def create_fake_character_combat_techniques(*, name: str, seed: int) -> ICharacterCombatTechnique:
-    return CharacterCombatTechnique.create_new(
-        entity_id=EntityID(),
-        name=name,
-    ).specify_combat_technique_properties(
-        stamina_cost=seed,
-        damage=seed,
-        cooldown=seed,
-    )
+async def test_complete_battle() -> None:
+    with pytest.raises(RuntimeError, match="Cannot instantiate directly"):
+        CharacterCombatTechnique()
 
-
-def create_fake_character_spell(*, name: str, seed: int) -> ICharacterSpell:
-    return CharacterSpell.create_new(
-        entity_id=EntityID(),
-        name=name,
-    ).specify_spell_properties(
-        mana_cost=seed,
-        damage=seed,
-        cooldown=seed,
-    )
-
-
-def create_fake_character(
-    *,
-    name: str,
-    combat_techniques: tuple[ICharacterCombatTechnique, ...] = tuple(),
-    spells: tuple[ICharacterSpell, ...] = tuple(),
-) -> ICharacter:
-    return (
-        Character.create_new(entity_id=EntityID(), name=name)
-        .specify_skill_properties(life_points=MAXIMUS_POINTS, stamina_points=MAXIMUS_POINTS, mana_points=MAXIMUS_POINTS)
-        .add_combat_techniques(*combat_techniques)
-        .add_spells(*spells)
-    )
-
-
-def test_complete_battle() -> None:
     with pytest.raises(RuntimeError, match="Cannot instantiate directly"):
         CharacterSpell()
 
     with pytest.raises(RuntimeError, match="Cannot instantiate directly"):
         Character()
 
-    combat_technique_seed = 15
-    neryo_tchagui = create_fake_character_combat_techniques(name="Neryo Tchagui", seed=combat_technique_seed)
-    mondolio_tchagui = create_fake_character_combat_techniques(name="Mondolio Tchagui", seed=combat_technique_seed)
-    jab_punch = create_fake_character_combat_techniques(name="Jab Punch", seed=combat_technique_seed)
-    direct_punch = create_fake_character_combat_techniques(name="Direct Punch", seed=combat_technique_seed)
-    cross_punch = create_fake_character_combat_techniques(name="Cross Punch", seed=combat_technique_seed)
-    spell_seed = 15
-    hadouken = create_fake_character_spell(name="Hadouken", seed=spell_seed)
-    shoryuken = create_fake_character_spell(name="Shoryuken", seed=spell_seed)
-    shoot_spider_web = create_fake_character_spell(name="Shoot Spider Web", seed=spell_seed)
+    seed = 15
+    neryo_tchagui = fake_character_combat_technique(seed)
+    shoot_spider_web = fake_character_spell(seed)
 
-    character1 = create_fake_character(
-        name="John Wick",
-        combat_techniques=(neryo_tchagui, mondolio_tchagui),
-        spells=(hadouken, shoryuken),
-    )
-    character2 = create_fake_character(
-        name="Spider Man",
-        combat_techniques=(neryo_tchagui,),
-        spells=(hadouken,),
-    )
-    character3 = create_fake_character(
-        name="Spider Man",
-        spells=(shoot_spider_web,),
-    )
-    character4 = create_fake_character(
-        name="Rocky Balboa",
-        combat_techniques=(jab_punch, direct_punch, cross_punch),
-    )
+    characters_names = ("Itadori", "Makima", "Tsubasa", "Aizen")
+    character1 = fake_character(characters_names[0], seed, combat_technique_quantity=3, spell_quantity=0)
+    character2 = fake_character(characters_names[1], seed, combat_technique_quantity=2, spell_quantity=1)
+    character3 = fake_character(characters_names[2], seed, combat_technique_quantity=1, spell_quantity=2)
+    character4 = fake_character(characters_names[3], seed, combat_technique_quantity=0, spell_quantity=3)
 
     with pytest.raises(ThisCharacterDoesNotHaveThatSpell):
-        character3.cast_spell(spell_id=hadouken.entity_id, target_character=character2)
+        character1.cast_spell(shoot_spider_web.entity_id, character2)
 
     with pytest.raises(ThisCharacterDoesNotHaveThatCombatTechnique):
-        character3.apply_combat_technique(combat_technique_id=neryo_tchagui.entity_id, target_character=character2)
+        character1.apply_combat_technique(neryo_tchagui.entity_id, character2)
 
-    team1 = Team(characters=(character1, character2))
-    team2 = Team(characters=(character3, character4))
-    battle = (
-        Battle(entity_id=EntityID())
-        .pass_turn_algorithm(PassTurnAlgorithm.REGULAR_CIRCULAR_QUEUE)
-        .add_battle_allies(teams=(team1,))
-        .add_battle_allies(teams=(team2,))
-        .init_battle()
-    )
-    assert battle.is_current_player(player=character1)
+    team_a = fake_team(character1, character2)
+    team_b = fake_team(character3, character4)
+    battle_allies_a = fake_battle_allies(team_a)
+    battle_allies_b = fake_battle_allies(team_b)
+    event_dispatcher = BattleEventDispatcher()
+    battle = fake_battle(event_dispatcher, PassTurnAlgorithmEnum.REGULAR_PASS_TURN, battle_allies_a, battle_allies_b)
 
-    def simulate_playing(
-        combat_technique_id: IEntityID, spell_id: IEntityID
-    ) -> Callable[[ICharacter, ICharacter], None]:
-        def playing(player: ICharacter, target_character: ICharacter) -> None:
-            player.cast_spell(spell_id=spell_id, target_character=target_character)
-            player.apply_combat_technique(combat_technique_id=combat_technique_id, target_character=target_character)
+    def playing_move(
+        character_name: str,
+        character: ICharacterPublicMethods,
+        his_enemies: tuple[ICharacterPublicMethods, ...],
+    ) -> None:
+        assert character.name == character_name
+        chosen_enemy = his_enemies[0]
+        combat_technique = next(character.available_combat_techniques, None)
+        spell = next(character.available_spells, None)
+        character_current_stamina_points = character.current_stamina_points
+        character_current_mana_points = character.current_mana_points
+        if combat_technique:
+            enemy_current_life_points = chosen_enemy.current_life_points
+            character.apply_combat_technique(combat_technique.entity_id, chosen_enemy)
+            assert chosen_enemy.current_life_points == max(enemy_current_life_points - combat_technique.damage, 0)
+            assert character.current_stamina_points == max(
+                character_current_stamina_points - combat_technique.stamina_cost, 0
+            )
+        if spell:
+            enemy_current_life_points = chosen_enemy.current_life_points
+            character.cast_spell(spell.entity_id, chosen_enemy)
+            assert chosen_enemy.current_life_points == max(enemy_current_life_points - spell.damage, 0)
+            assert character.current_mana_points == max(character_current_mana_points - spell.mana_cost, 0)
 
-        return playing
+    async def battle_round() -> None:
+        characters_order = (characters_names[0], characters_names[2], characters_names[1], characters_names[3])
+        for character_name in characters_order:
+            with suppress(BattleIsNotHappeningException):
+                await battle.play(partial(playing_move, character_name))
 
-    battle.play(playing=simulate_playing(neryo_tchagui.entity_id, hadouken.entity_id))
-    assert battle.is_current_player(player=character2)
-    assert character1.get_current_stamina_points == MAXIMUS_POINTS - combat_technique_seed
-    assert character1.get_current_mana_points == MAXIMUS_POINTS - spell_seed
-    assert character1.get_current_life_points == MAXIMUS_POINTS - (spell_seed + combat_technique_seed)
+    for _ in range(14):
+        await battle_round()
+
+    assert event_dispatcher.was_dispatched(CharacterWonBattleEvent)
+    assert event_dispatcher.was_dispatched(CharacterLostBattleEvent)
+    assert not event_dispatcher.has(CharacterWonBattleEvent)
+    assert not event_dispatcher.has(CharacterLostBattleEvent)
+    with pytest.raises(BattleIsNotHappeningException):
+        await battle.play(partial(playing_move, characters_names[0]))

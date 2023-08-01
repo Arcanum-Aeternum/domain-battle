@@ -1,7 +1,6 @@
 from typing import Generator
 
-from trio import open_nursery
-from trio import to_thread
+from trio import open_nursery, to_thread
 
 from domain.character_combat_technique import ICharacterCombatTechniquePublicMethods
 from domain.character_spell import ICharacterSpellPublicMethods
