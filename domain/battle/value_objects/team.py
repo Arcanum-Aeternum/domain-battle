@@ -1,19 +1,19 @@
-from domain.character import ICharacterPublicMethods
+from domain.character import ICharacter
 from domain.interfaces import ValueObject
 
-from .interfaces import ITeam, ITeamBuilder, ITeamPublicMethods
+from .interfaces import ITeam, ITeamBuilder, ITeamFactory
 
 
-class Team(ValueObject, ITeam):
+class Team(ValueObject, ITeamFactory, ITeam):
     """Value Object that represents the Team"""
 
     def __init__(self) -> None:
         raise NotImplementedError("This class should not be instantiated directly.")
 
     def _init(self) -> None:
-        self.__characters: tuple[ICharacterPublicMethods, ...]
+        self.__characters: tuple[ICharacter, ...]
 
-    def _set_characters(self, characters: tuple[ICharacterPublicMethods, ...]) -> None:
+    def _set_characters(self, characters: tuple[ICharacter, ...]) -> None:
         self.__characters = characters
 
     @classmethod
@@ -23,7 +23,7 @@ class Team(ValueObject, ITeam):
         return _TeamBuilder(new_team)
 
     @property
-    def characters(self) -> tuple[ICharacterPublicMethods, ...]:
+    def characters(self) -> tuple[ICharacter, ...]:
         return tuple(self.__characters)
 
 
@@ -32,13 +32,13 @@ class _TeamBuilder(ITeamBuilder):
 
     def __init__(self, team: Team) -> None:
         self.__team = team
-        self.__characters: list[ICharacterPublicMethods] = []
+        self.__characters: list[ICharacter] = []
 
-    def add_character(self, character: ICharacterPublicMethods) -> ITeamBuilder:
+    def add_character(self, character: ICharacter) -> ITeamBuilder:
         self.__characters.append(character)
         return self
 
-    def build(self) -> ITeamPublicMethods:
+    def build(self) -> ITeam:
         if len(self.__characters) == 0:
             raise ValueError("Team should have at least one Character.")
         self.__team._set_characters(tuple(self.__characters))

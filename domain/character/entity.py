@@ -1,28 +1,23 @@
-from typing import Generator
+from typing import Generator, Type, TypeVar, cast
 
-from trio import open_nursery, to_thread
-
-from domain.character_combat_technique import ICharacterCombatTechniquePublicMethods
-from domain.character_spell import ICharacterSpellPublicMethods
-from domain.interfaces import Entity, IEntityID
+from domain import Entity, IEntityID
+from domain.skill import IAttackable, ICooldownSkill, IMagicalAttack, IPhysicalAttack, ISkill
+from domain.skill.combat_technique import CombatTechnique, ICombatTechnique
+from domain.skill.spell import ISpell, Spell
 
 from .exceptions import (
-    CombatTechniqueNotAvailable,
-    SpellNotAvailable,
-    ThisCharacterDoesNotHaveThatCombatTechnique,
-    ThisCharacterDoesNotHaveThatSpell,
+    CantUseThisSkillToAttackException,
+    CharacterDoesNotHaveThatSkillException,
+    NoCombatTechniqueAvailableException,
+    NoSpellAvailableException,
 )
-from .interfaces import (
-    ICharacter,
-    ICharacterPublicMethods,
-    ICombatTechniquesBuilder,
-    ISkillProfileBuilder,
-    ISpellsBuilder,
-)
+from .interfaces import ICharacter, ICharacterFactory, ISkillBuilder, IStatsProfileBuilder
 from .value_objects import SkillProfile
 
+T_skill_contra = TypeVar("T_skill_contra", bound=ISkill, contravariant=True)
 
-class Character(Entity, ICharacter, ICharacterPublicMethods):
+
+class Character(Entity, ICharacterFactory, ICharacter):
     """Class that represents a Character entity"""
 
     def __init__(self) -> None:
@@ -39,17 +34,14 @@ class Character(Entity, ICharacter, ICharacterPublicMethods):
     def _build_skill_profile(self, skill_profile: SkillProfile) -> None:
         self.__skill_profile = skill_profile
 
-    def _build_combat_techniques(self, combat_techniques: tuple[ICharacterCombatTechniquePublicMethods, ...]) -> None:
-        self.__combat_techniques = combat_techniques
-
-    def _build_spells(self, spells: tuple[ICharacterSpellPublicMethods, ...] = tuple()) -> None:
-        self.__spells = spells
+    def _build_skills(self, skills: tuple[ISkill, ...]) -> None:
+        self.__skills = skills
 
     @classmethod
-    def create_new(cls, *, entity_id: IEntityID, name: str) -> ISkillProfileBuilder:
+    def create_new(cls, *, entity_id: IEntityID, name: str) -> IStatsProfileBuilder:
         new_character = cls.__new__(cls)
         new_character._init(entity_id, name)
-        return _BuildSkillProfile(new_character)
+        return _StatsProfileBuilder(new_character)
 
     @property
     def name(self) -> str:
@@ -72,108 +64,84 @@ class Character(Entity, ICharacter, ICharacterPublicMethods):
         return self.__skill_profile.current_mana_points
 
     @property
-    def available_combat_techniques(self) -> Generator[ICharacterCombatTechniquePublicMethods, None, None]:
+    def available_combat_techniques(self) -> Generator[ICombatTechnique, None, None]:
         try:
-            return (combat_technique for combat_technique in self.__combat_techniques if combat_technique.is_ready)
+            skills_gen = self.__available_skills(CombatTechnique)
+            return (cast(CombatTechnique, skill) for skill in skills_gen)
         except StopIteration as error:
-            msg = "No combat technique is available"
-            raise CombatTechniqueNotAvailable(msg) from error
+            raise NoCombatTechniqueAvailableException() from error
 
     @property
-    def available_spells(self) -> Generator[ICharacterSpellPublicMethods, None, None]:
+    def available_spells(self) -> Generator[ISpell, None, None]:
         try:
-            return (spell for spell in self.__spells if spell.is_ready)
+            skills_gen = self.__available_skills(Spell)
+            return (cast(Spell, skill) for skill in skills_gen)
         except StopIteration as error:
-            msg = "No spell is available"
-            raise SpellNotAvailable(msg) from error
+            raise NoSpellAvailableException() from error
 
-    def apply_combat_technique(self, combat_technique_id: IEntityID, target_character: ICharacterPublicMethods) -> None:
+    def attack(self, skill_id: IEntityID, target_character: ICharacter) -> None:
         try:
-            combat_technique = next(
-                combat_technique
-                for combat_technique in self.__combat_techniques
-                if combat_technique.entity_id == combat_technique_id and combat_technique.is_ready
-            )
-            combat_technique.apply_combat_technique()
-            self.__skill_profile.decrement_stamina_points(combat_technique.stamina_cost)
-            target_character._receive_attack(combat_technique.damage)
-        except StopIteration:
-            raise ThisCharacterDoesNotHaveThatCombatTechnique()
+            skill = next(skill for skill in self.__skills if skill == skill_id)
+            if not isinstance(skill, IAttackable):
+                raise CantUseThisSkillToAttackException()
+            skill.use()
+            if isinstance(skill, IMagicalAttack):
+                self.__skill_profile.use_mana(skill.cost)
+            if isinstance(skill, IPhysicalAttack):
+                self.__skill_profile.use_stamina(skill.cost)
+            target_character._receive_attack(skill.damage)
+        except StopIteration as error:
+            raise CharacterDoesNotHaveThatSkillException() from error
 
-    def cast_spell(self, spell_id: IEntityID, target_character: ICharacterPublicMethods) -> None:
-        try:
-            spell = next(spell for spell in self.__spells if spell.entity_id == spell_id and spell.is_ready)
-            spell.cast_spell()
-            self.__skill_profile.decrement_mana_points(spell.mana_cost)
-            target_character._receive_attack(spell.damage)
-        except StopIteration:
-            raise ThisCharacterDoesNotHaveThatSpell()
-
-    async def rest(self) -> None:
-        def _rest_combat_technique() -> None:
-            for combat_technique in self.__combat_techniques:
-                combat_technique.rest_and_prepare()
-
-        def _load_spell() -> None:
-            for spell in self.__spells:
-                spell.load_spell()
-
-        async with open_nursery() as nursery:
-            nursery.start_soon(to_thread.run_sync, _rest_combat_technique)
-            nursery.start_soon(to_thread.run_sync, _load_spell)
+    def rest(self) -> None:
+        for skill in self.__skills_on_cooldown():
+            skill.rest()
 
     def _receive_attack(self, damage: int) -> None:
-        self.__skill_profile.decrement_life_points(damage)
+        self.__skill_profile.take_damage(damage)
+
+    def __available_skills(self, skill_type: Type[T_skill_contra]) -> Generator[ISkill, None, None]:
+        try:
+            return (skill for skill in self.__skills if isinstance(skill, skill_type) and skill.is_ready)
+        except StopIteration as error:
+            msg = f"No {skill_type.__name__} is available"
+            error.add_note(msg)
+            raise error
+
+    def __skills_on_cooldown(self) -> Generator[ICooldownSkill, None, None]:
+        try:
+            return (skill for skill in self.__skills if isinstance(skill, ICooldownSkill) and not skill.is_ready)
+        except StopIteration as error:
+            error.add_note("All skills are available")
+            raise error
 
 
-class _BuildSkillProfile(ISkillProfileBuilder):
+class _StatsProfileBuilder(IStatsProfileBuilder):
     def __init__(
         self,
         character_obj: Character,
     ) -> None:
         self.__character_obj = character_obj
 
-    def specify_skill_properties(
-        self, life_points: int, stamina_points: int, mana_points: int
-    ) -> ICombatTechniquesBuilder:
+    def specify_skill_properties(self, life_points: int, stamina_points: int, mana_points: int) -> ISkillBuilder:
         skill_profile = SkillProfile(life_points=life_points, stamina_points=stamina_points, mana_points=mana_points)
         self.__character_obj._build_skill_profile(skill_profile)
-        return _BuildCombatTechniques(self.__character_obj)
+        return _SkillBuilder(self.__character_obj)
 
 
-class _BuildCombatTechniques(ICombatTechniquesBuilder):
+class _SkillBuilder(ISkillBuilder):
     def __init__(self, character_obj: Character) -> None:
         self.__character_obj = character_obj
-        self.__combat_techniques_list: list[ICharacterCombatTechniquePublicMethods] = []
+        self.__skills_list: list[ISkill] = []
 
-    def build(self) -> ISpellsBuilder:
-        self.__character_obj._build_combat_techniques(tuple(self.__combat_techniques_list))
-        return _BuildSpells(self.__character_obj)
-
-    def add_combat_technique(
-        self, combat_technique: ICharacterCombatTechniquePublicMethods
-    ) -> ICombatTechniquesBuilder:
-        self.__combat_techniques_list.append(combat_technique)
-        return self
-
-    def add_combat_techniques(self, *combat_technique: ICharacterCombatTechniquePublicMethods) -> ISpellsBuilder:
-        self.__combat_techniques_list.extend(combat_technique)
-        return self.build()
-
-
-class _BuildSpells(ISpellsBuilder):
-    def __init__(self, character_obj: Character) -> None:
-        self.__character_obj = character_obj
-        self.__spell_list: list[ICharacterSpellPublicMethods] = []
-
-    def build(self) -> Character:
-        self.__character_obj._build_spells(tuple(self.__spell_list))
+    def build(self) -> ICharacter:
+        self.__character_obj._build_skills(tuple(self.__skills_list))
         return self.__character_obj
 
-    def add_spell(self, spell: ICharacterSpellPublicMethods) -> ISpellsBuilder:
-        self.__spell_list.append(spell)
+    def add_skill(self, skill: ISkill) -> ISkillBuilder:
+        self.__skills_list.append(skill)
         return self
 
-    def add_spells(self, *spells: ICharacterSpellPublicMethods) -> Character:
-        self.__spell_list.extend(spells)
+    def add_skills(self, *skills: ISkill) -> ICharacter:
+        self.__skills_list.extend(skills)
         return self.build()

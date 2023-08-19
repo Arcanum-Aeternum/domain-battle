@@ -1,13 +1,16 @@
 from abc import ABCMeta, abstractmethod
 from typing import Generator
 
-from domain.character_combat_technique import ICharacterCombatTechniquePublicMethods
-from domain.character_spell import ICharacterSpellPublicMethods
-from domain.interfaces import IEntityID
+from domain import IEntityID
+from domain.skill import ISkill
+from domain.skill.combat_technique import ICombatTechnique
+from domain.skill.spell import ISpell
 
 
-class ICharacterPublicMethods(metaclass=ABCMeta):
+class ICharacter(metaclass=ABCMeta):
     """Interface that defines the public methods in Character"""
+
+    entity_id: IEntityID
 
     @property
     @abstractmethod
@@ -36,26 +39,20 @@ class ICharacterPublicMethods(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def available_combat_techniques(self) -> Generator[ICharacterCombatTechniquePublicMethods, None, None]:
+    def available_combat_techniques(self) -> Generator[ICombatTechnique, None, None]:
         ...
 
     @property
     @abstractmethod
-    def available_spells(self) -> Generator[ICharacterSpellPublicMethods, None, None]:
+    def available_spells(self) -> Generator[ISpell, None, None]:
         ...
 
     @abstractmethod
-    def apply_combat_technique(
-        self, combat_technique_id: IEntityID, target_character: "ICharacterPublicMethods"
-    ) -> None:
+    def attack(self, skill_id: IEntityID, target_character: "ICharacter") -> None:
         ...
 
     @abstractmethod
-    def cast_spell(self, spell_id: IEntityID, target_character: "ICharacterPublicMethods") -> None:
-        ...
-
-    @abstractmethod
-    async def rest(self) -> None:
+    def rest(self) -> None:
         ...
 
     @abstractmethod
@@ -63,56 +60,34 @@ class ICharacterPublicMethods(metaclass=ABCMeta):
         ...
 
 
-class ISpellsBuilder(metaclass=ABCMeta):
-    """Interface that defines an easy way to add spells to the Character"""
+class ISkillBuilder(metaclass=ABCMeta):
+    """Interface that defines an easy way to add skills to the Character"""
 
     @abstractmethod
-    def build(self) -> ICharacterPublicMethods:
+    def build(self) -> ICharacter:
         ...
 
     @abstractmethod
-    def add_spells(self, *spells: ICharacterSpellPublicMethods) -> ICharacterPublicMethods:
+    def add_skills(self, *skills: ISkill) -> ICharacter:
         ...
 
     @abstractmethod
-    def add_spell(self, spell: ICharacterSpellPublicMethods) -> "ISpellsBuilder":
+    def add_skill(self, skill: ISkill) -> "ISkillBuilder":
         ...
 
 
-class ICombatTechniquesBuilder(metaclass=ABCMeta):
-    """Interface that defines an easy way to add combat techniques to the Character"""
-
-    @abstractmethod
-    def build(self) -> ISpellsBuilder:
-        ...
-
-    @abstractmethod
-    def add_combat_techniques(self, *combat_techniques: ICharacterCombatTechniquePublicMethods) -> ISpellsBuilder:
-        ...
-
-    @abstractmethod
-    def add_combat_technique(
-        self, combat_technique: ICharacterCombatTechniquePublicMethods
-    ) -> "ICombatTechniquesBuilder":
-        ...
-
-
-class ISkillProfileBuilder(metaclass=ABCMeta):
+class IStatsProfileBuilder(metaclass=ABCMeta):
     """Interface that defines an easy way to create a Character with its SkillProfile"""
 
     @abstractmethod
-    def specify_skill_properties(
-        self, life_points: int, stamina_points: int, mana_points: int
-    ) -> ICombatTechniquesBuilder:
+    def specify_skill_properties(self, life_points: int, stamina_points: int, mana_points: int) -> ISkillBuilder:
         ...
 
 
-class ICharacter(metaclass=ABCMeta):
+class ICharacterFactory(metaclass=ABCMeta):
     """Interface that define the public methods of Character with exception of factory methods"""
-
-    entity_id: IEntityID
 
     @classmethod
     @abstractmethod
-    def create_new(cls, *, entity_id: IEntityID, name: str) -> ISkillProfileBuilder:
+    def create_new(cls, *, entity_id: IEntityID, name: str) -> IStatsProfileBuilder:
         ...
