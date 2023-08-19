@@ -12,8 +12,7 @@ from domain._tests.fakes import (
 )
 from domain.battle.events.events import CharacterLostBattleEvent, CharacterWonBattleEvent
 from domain.battle.exceptions import BattleIsNotHappeningException
-from domain.battle.value_objects import PassTurnAlgorithmEnum
-from domain.battle.value_objects.move import IMoveBuilder
+from domain.battle.value_objects import IMoveBuilder, PassTurnAlgorithmEnum
 from domain.battle_event_dispatcher import BattleEventDispatcher
 from domain.character import Character, ICharacter
 from domain.character.exceptions import CharacterDoesNotHaveThatSkillException
