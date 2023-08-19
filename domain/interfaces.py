@@ -132,8 +132,10 @@ class Entity(metaclass=ABCMeta):
         self.entity_id = entity_id
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Entity):
+        if not isinstance(other, Entity) and not isinstance(other, IEntityID):
             return False
+        if isinstance(other, IEntityID):
+            return self.entity_id == other
         return self.entity_id == other.entity_id
 
     def __ne__(self, other: object) -> bool:

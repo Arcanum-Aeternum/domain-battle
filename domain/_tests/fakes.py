@@ -1,23 +1,18 @@
 from typing import Generator
 
 from domain import EventDispatcher
-from domain.battle.entity import Battle
-from domain.battle.interfaces import IBattlePublicMethods
-from domain.battle.value_objects import (
-    BattleAllies,
-    IBattleAlliesPublicMethods,
-    ITeamPublicMethods,
-    PassTurnAlgorithmEnum,
-    Team,
-)
-from domain.character import Character, ICharacterPublicMethods
-from domain.character_combat_technique import CharacterCombatTechnique, ICharacterCombatTechniquePublicMethods
-from domain.character_spell import CharacterSpell, ICharacterSpellPublicMethods
+from domain.battle import Battle, IBattle
+from domain.battle.value_objects import BattleAllies, IBattleAllies, ITeam, PassTurnAlgorithmEnum, Team
+from domain.character import Character, ICharacter
+from domain.skill.combat_technique import CombatTechnique, ICombatTechnique
+from domain.skill.spell import ISpell, Spell
 from domain.value_objects import EntityID
 
+MAXIMUS_POINTS = 100
 
-def fake_character_combat_technique(seed: int) -> ICharacterCombatTechniquePublicMethods:
-    return CharacterCombatTechnique.create_new(
+
+def fake_combat_technique(seed: int) -> ICombatTechnique:
+    return CombatTechnique.create_new(
         entity_id=EntityID(),
         name=str(seed),
     ).specify_combat_technique_properties(
@@ -27,8 +22,8 @@ def fake_character_combat_technique(seed: int) -> ICharacterCombatTechniquePubli
     )
 
 
-def fake_character_spell(seed: int) -> ICharacterSpellPublicMethods:
-    return CharacterSpell.create_new(
+def fake_spell(seed: int) -> ISpell:
+    return Spell.create_new(
         entity_id=EntityID(),
         name=str(seed),
     ).specify_spell_properties(
@@ -43,9 +38,8 @@ def fake_character(
     seed: int,
     combat_technique_quantity: int,
     spell_quantity: int,
-) -> ICharacterPublicMethods:
-    MAXIMUS_POINTS = 100
-    combat_technique_builder = Character.create_new(
+) -> ICharacter:
+    skill_builder = Character.create_new(
         entity_id=EntityID(),
         name=name,
     ).specify_skill_properties(
@@ -53,35 +47,30 @@ def fake_character(
         stamina_points=MAXIMUS_POINTS,
         mana_points=MAXIMUS_POINTS,
     )
-    while combat_technique_quantity > 0:
-        combat_technique_builder = combat_technique_builder.add_combat_technique(fake_character_combat_technique(seed))
-        combat_technique_quantity -= 1
-    spell_builder = combat_technique_builder.build()
-    while spell_quantity > 0:
-        spell_builder = spell_builder.add_spell(fake_character_spell(seed))
-        spell_quantity -= 1
-    return spell_builder.build()
+    combat_techniques = [fake_combat_technique(seed) for _ in range(combat_technique_quantity)]
+    spells = [fake_spell(seed) for _ in range(spell_quantity)]
+    return skill_builder.add_skills(*combat_techniques, *spells)
 
 
-def fake_character_gen(seed: int, character_quantity: int) -> Generator[ICharacterPublicMethods, None, None]:
+def fake_character_gen(seed: int, character_quantity: int) -> Generator[ICharacter, None, None]:
     yield from (fake_character(str(seed), seed, seed, seed) for _ in range(character_quantity))
 
 
-def fake_team(*characters: ICharacterPublicMethods) -> ITeamPublicMethods:
+def fake_team(*characters: ICharacter) -> ITeam:
     team_builder = Team.create_new()
     for character in characters:
         team_builder = team_builder.add_character(character)
     return team_builder.build()
 
 
-def fake_team_gen(seed: int, team_quantity: int, character_quantity: int) -> Generator[ITeamPublicMethods, None, None]:
+def fake_team_gen(seed: int, team_quantity: int, character_quantity: int) -> Generator[ITeam, None, None]:
     yield from (
         fake_team(*list(character for character in fake_character_gen(seed, character_quantity)))
         for _ in range(team_quantity)
     )
 
 
-def fake_battle_allies(*teams: ITeamPublicMethods) -> IBattleAlliesPublicMethods:
+def fake_battle_allies(*teams: ITeam) -> IBattleAllies:
     battle_allies_builder = BattleAllies.create_new()
     for team in teams:
         battle_allies_builder = battle_allies_builder.add_team(team)
@@ -93,7 +82,7 @@ def fake_battle_allies_gen(
     battle_allies_quantity: int,
     team_quantity: int,
     character_quantity: int,
-) -> Generator[IBattleAlliesPublicMethods, None, None]:
+) -> Generator[IBattleAllies, None, None]:
     yield from (
         fake_battle_allies(*list(team for team in fake_team_gen(seed, team_quantity, character_quantity)))
         for _ in range(battle_allies_quantity)
@@ -103,8 +92,8 @@ def fake_battle_allies_gen(
 def fake_battle(
     event_dispatcher: EventDispatcher,
     pass_turn_algorithm_enum: PassTurnAlgorithmEnum,
-    *battle_allies_tuple: IBattleAlliesPublicMethods
-) -> IBattlePublicMethods:
+    *battle_allies_tuple: IBattleAllies
+) -> IBattle:
     battle_builder = Battle.create_new(event_dispatcher=event_dispatcher, entity_id=EntityID(), is_battle_ongoing=False)
     for battle_allies in battle_allies_tuple:
         battle_builder = battle_builder.add_battle_allies(battle_allies)

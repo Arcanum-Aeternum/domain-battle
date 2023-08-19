@@ -1,7 +1,7 @@
 import pytest
 
 from domain._tests.fakes import fake_battle_allies_gen
-from domain.battle.value_objects.interfaces import IBattleAlliesPublicMethods
+from domain.battle.value_objects.interfaces import IBattleAllies
 
 from ..pass_turn_algorithm import RegularPassTurn
 
@@ -11,7 +11,7 @@ def many_battle_allies(
     battle_allies_quantity: int,
     team_quantity: int,
     character_quantity: int,
-) -> tuple[IBattleAlliesPublicMethods, ...]:
+) -> tuple[IBattleAllies, ...]:
     return tuple(
         battle_allies
         for battle_allies in fake_battle_allies_gen(

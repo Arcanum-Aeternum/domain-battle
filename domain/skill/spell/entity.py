@@ -1,14 +1,14 @@
-"""Module describes the CharacterSpell entity and its direct dependencies"""
+"""Module describes the Spell entity and its direct dependencies"""
 from typing import Callable
 
-from domain.interfaces import Entity, IEntityID
+from domain import Entity, IEntityID
 
-from .interfaces import ICharacterSpell, ICharacterSpellPublicMethods, ISpellProfileBuilder
+from .interfaces import ISpell, ISpellFactory, ISpellProfileBuilder
 from .value_objects import SpellProfile
 
 
-class CharacterSpell(Entity, ICharacterSpell, ICharacterSpellPublicMethods):
-    """Class that represents a CharacterSpell entity"""
+class Spell(Entity, ISpellFactory, ISpell):
+    """Class that represents a Spell entity"""
 
     def __init__(self) -> None:
         raise RuntimeError("Cannot instantiate directly")
@@ -22,9 +22,9 @@ class CharacterSpell(Entity, ICharacterSpell, ICharacterSpellPublicMethods):
 
     @classmethod
     def create_new(cls, *, entity_id: IEntityID, name: str) -> ISpellProfileBuilder:
-        new_character_spell = cls.__new__(cls)
-        new_character_spell._init(entity_id, name)
-        return _SpellProfileBuilder(new_character_spell, new_character_spell._set_spell_profile)
+        new_spell = cls.__new__(cls)
+        new_spell._init(entity_id, name)
+        return _SpellProfileBuilder(new_spell, new_spell._set_spell_profile)
 
     @property
     def name(self) -> str:
@@ -39,24 +39,24 @@ class CharacterSpell(Entity, ICharacterSpell, ICharacterSpellPublicMethods):
         return self.__spell_profile.get_damage
 
     @property
-    def mana_cost(self) -> int:
+    def cost(self) -> int:
         return self.__spell_profile.get_mana_cost
 
-    def cast_spell(self) -> None:
+    def use(self) -> None:
         self.__spell_profile.start_loading_time()
 
-    def load_spell(self) -> None:
+    def rest(self) -> None:
         self.__spell_profile.load_spell()
 
 
 class _SpellProfileBuilder(ISpellProfileBuilder):
     def __init__(
         self,
-        character_spell_obj: CharacterSpell,
+        spell_obj: Spell,
         func_set_spell_profile: Callable[[SpellProfile], None],
     ) -> None:
         self.__func_set_spell_profile = func_set_spell_profile
-        self.__character_spell_obj = character_spell_obj
+        self.__spell_obj = spell_obj
 
     def specify_spell_properties(
         self,
@@ -64,7 +64,7 @@ class _SpellProfileBuilder(ISpellProfileBuilder):
         damage: int,
         cooldown: int,
         loading_time: int = 0,
-    ) -> CharacterSpell:
+    ) -> Spell:
         spell_profile = SpellProfile(
             mana_cost=mana_cost,
             damage=damage,
@@ -72,4 +72,4 @@ class _SpellProfileBuilder(ISpellProfileBuilder):
             loading_time=loading_time,
         )
         self.__func_set_spell_profile(spell_profile)
-        return self.__character_spell_obj
+        return self.__spell_obj

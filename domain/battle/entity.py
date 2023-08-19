@@ -2,25 +2,27 @@
 from typing import Callable
 
 from trio import open_nursery
+from trio.to_thread import run_sync
 
-from domain.character import ICharacterPublicMethods
-from domain.character_combat_technique.exceptions import CombatTechniqueIsAlreadyReady
-from domain.character_spell.exceptions import SpellIsAlreadyReady
+from domain.battle.value_objects import IMoveBuilder, Move
+from domain.character import ICharacter
 from domain.interfaces import AggregateRoot, EventDispatcher, IEntityID
+from domain.skill.combat_technique.exceptions import CombatTechniqueIsAlreadyReady
+from domain.skill.spell.exceptions import SpellIsAlreadyReady
 
 from .events import EventFactory
 from .exceptions import BattleIsAlreadyHappeningException, BattleIsNotHappeningException
-from .interfaces import IBattle, IBattleBuilder
+from .interfaces import IBattle, IBattleBuilder, IBattleFactory
 from .value_objects import (
     BattleAllies,
+    IBattleAllies,
     IBattleAlliesBuilder,
-    IBattleAlliesPublicMethods,
     PassTurnAlgorithmEnum,
     PassTurnAlgorithmStrategy,
 )
 
 
-class Battle(IBattle, AggregateRoot):
+class Battle(AggregateRoot, IBattleFactory, IBattle):
     """Class that represents a Battle entity, which is the aggregate root"""
 
     def __init__(self) -> None:
@@ -47,7 +49,7 @@ class Battle(IBattle, AggregateRoot):
     def _set_specifications(
         self,
         pass_turn_algorithm: PassTurnAlgorithmEnum,
-        participants_battle_allies: tuple[IBattleAlliesPublicMethods, ...],
+        participants_battle_allies: tuple[IBattleAllies, ...],
     ) -> None:
         self.__pass_turn_algorithm = PassTurnAlgorithmStrategy(pass_turn_algorithm, participants_battle_allies)
 
@@ -61,23 +63,22 @@ class Battle(IBattle, AggregateRoot):
             new_battle._init_battle()
         return _BattleSpecificationsBuilder(new_battle)
 
-    async def play(
-        self, playing: Callable[[ICharacterPublicMethods, tuple[ICharacterPublicMethods, ...]], None]
-    ) -> None:
+    async def play(self, build_playing_move: Callable[[IMoveBuilder], None]) -> None:
         """Pass the turn to the other player"""
         if not self.__is_battle_ongoing:
             raise BattleIsNotHappeningException()
         current_character, enemies = self.__pass_turn_algorithm.next_turn()
-        playing(current_character, enemies)
+        move_builder = Move.create_new(current_character, enemies)
+        build_playing_move(move_builder)
         async with open_nursery() as nursery:
             nursery.start_soon(self._rest_characters, [current_character, *enemies])
             nursery.start_soon(self._notify)
 
-    async def _rest_characters(self, characters: list[ICharacterPublicMethods]) -> None:
+    async def _rest_characters(self, characters: list[ICharacter]) -> None:
         try:
             async with open_nursery() as nursery:
                 for character in characters:
-                    nursery.start_soon(character.rest)
+                    nursery.start_soon(run_sync, character.rest)
         except (ExceptionGroup, CombatTechniqueIsAlreadyReady, SpellIsAlreadyReady):
             ...
 
@@ -90,7 +91,7 @@ class Battle(IBattle, AggregateRoot):
                 nursery.start_soon(self.__notify_winning_characters, winners_characters)
                 nursery.start_soon(self.__notify_losing_characters, losers_characters)
 
-    async def __notify_winning_characters(self, winning_characters: tuple[ICharacterPublicMethods, ...]) -> None:
+    async def __notify_winning_characters(self, winning_characters: tuple[ICharacter, ...]) -> None:
         """Notifies the winning characters of the Battle"""
         if self.__is_battle_ongoing:
             raise BattleIsAlreadyHappeningException("Cannot notify winning characters if the battle is ongoing")
@@ -98,7 +99,7 @@ class Battle(IBattle, AggregateRoot):
             for character in winning_characters:
                 event_factory.character_won_battle(character.name)
 
-    async def __notify_losing_characters(self, losing_characters: tuple[ICharacterPublicMethods, ...]) -> None:
+    async def __notify_losing_characters(self, losing_characters: tuple[ICharacter, ...]) -> None:
         """Notifies the losing characters of the Battle"""
         if self.__is_battle_ongoing:
             raise BattleIsAlreadyHappeningException("Cannot notify losing characters if the battle is ongoing")
@@ -117,17 +118,17 @@ class _BattleSpecificationsBuilder(IBattleBuilder):
 
     def __init__(self, battle: Battle) -> None:
         self.__battle = battle
-        self.__participants_battle_allies: list[IBattleAlliesPublicMethods] = []
+        self.__participants_battle_allies: list[IBattleAllies] = []
 
     def add_battle_allies_builder(
-        self, build_battle_allies: Callable[[IBattleAlliesBuilder], IBattleAlliesPublicMethods]
+        self, build_battle_allies: Callable[[IBattleAlliesBuilder], IBattleAllies]
     ) -> IBattleBuilder:
         new_battle_allies = BattleAllies.create_new()
         builded_battle_allies = build_battle_allies(new_battle_allies)
         self.__participants_battle_allies.append(builded_battle_allies)
         return self
 
-    def add_battle_allies(self, battle_allies: IBattleAlliesPublicMethods) -> IBattleBuilder:
+    def add_battle_allies(self, battle_allies: IBattleAllies) -> IBattleBuilder:
         self.__participants_battle_allies.append(battle_allies)
         return self
 

@@ -2,15 +2,42 @@ from abc import ABCMeta, abstractmethod
 from enum import Enum
 from typing import Callable
 
-from domain.character import ICharacterPublicMethods
+from domain import IEntityID
+from domain.character import ICharacter
+from domain.skill import IAttackable
 
 
-class ITeamPublicMethods(metaclass=ABCMeta):
+class IMove(metaclass=ABCMeta):
+    """Interface that defines the public methods in Move"""
+
+    @classmethod
+    @abstractmethod
+    def create_new(cls, playing_character: ICharacter, enemy_characters: tuple[ICharacter, ...]) -> "IMoveBuilder":
+        ...
+
+
+class IRestBuilder(metaclass=ABCMeta):
+    """Interface that defines the public methods in RestBuilder"""
+
+    @abstractmethod
+    def rest(self) -> IMove:
+        ...
+
+
+class IMoveBuilder(IRestBuilder, metaclass=ABCMeta):
+    """Interface that defines the public methods in MoveBuilder"""
+
+    @abstractmethod
+    def attack(self, target_enemy_id: IEntityID, attack_skill: IAttackable) -> IRestBuilder:
+        ...
+
+
+class ITeam(metaclass=ABCMeta):
     """Interface that defines the public methods that Battle expects to find in Team"""
 
     @property
     @abstractmethod
-    def characters(self) -> tuple[ICharacterPublicMethods, ...]:
+    def characters(self) -> tuple[ICharacter, ...]:
         ...
 
 
@@ -18,15 +45,15 @@ class ITeamBuilder(metaclass=ABCMeta):
     """Interface that defines an easy way to add characters to the Team"""
 
     @abstractmethod
-    def build(self) -> ITeamPublicMethods:
+    def build(self) -> ITeam:
         ...
 
     @abstractmethod
-    def add_character(self, character: ICharacterPublicMethods) -> "ITeamBuilder":
+    def add_character(self, character: ICharacter) -> "ITeamBuilder":
         ...
 
 
-class ITeam(ITeamPublicMethods, metaclass=ABCMeta):
+class ITeamFactory(metaclass=ABCMeta):
     """Interface that defines the public methods that Battle expects to find in Team"""
 
     @classmethod
@@ -35,12 +62,12 @@ class ITeam(ITeamPublicMethods, metaclass=ABCMeta):
         ...
 
 
-class IBattleAlliesPublicMethods(metaclass=ABCMeta):
+class IBattleAllies(metaclass=ABCMeta):
     """Interface that defines the public methods that Battle expects to find in BattleAllies"""
 
     @property
     @abstractmethod
-    def teams(self) -> tuple[ITeamPublicMethods, ...]:
+    def teams(self) -> tuple[ITeam, ...]:
         ...
 
 
@@ -48,19 +75,19 @@ class IBattleAlliesBuilder(metaclass=ABCMeta):
     """Interface that defines an easy way to create a Battle with its Battle Allies"""
 
     @abstractmethod
-    def add_team_builder(self, build_team: Callable[[ITeamBuilder], ITeamPublicMethods]) -> "IBattleAlliesBuilder":
+    def add_team_builder(self, build_team: Callable[[ITeamBuilder], ITeam]) -> "IBattleAlliesBuilder":
         ...
 
     @abstractmethod
-    def add_team(self, team: ITeamPublicMethods) -> "IBattleAlliesBuilder":
+    def add_team(self, team: ITeam) -> "IBattleAlliesBuilder":
         ...
 
     @abstractmethod
-    def build(self) -> IBattleAlliesPublicMethods:
+    def build(self) -> IBattleAllies:
         ...
 
 
-class IBattleAllies(IBattleAlliesPublicMethods, metaclass=ABCMeta):
+class IBattleAlliesFactory(metaclass=ABCMeta):
     """Interface that defines the public methods that Battle expects to find in BattleAllies"""
 
     @classmethod
@@ -81,19 +108,19 @@ class IPassTurnAlgorithm(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def current_character(self) -> ICharacterPublicMethods:
+    def current_character(self) -> ICharacter:
         """Returns the current character"""
 
     @property
     @abstractmethod
-    def enemies(self) -> tuple[ICharacterPublicMethods, ...]:
+    def enemies(self) -> tuple[ICharacter, ...]:
         """Returns the enemies of the current character""" ""
 
     @property
     @abstractmethod
-    def finalists(self) -> tuple[tuple[ICharacterPublicMethods, ...], tuple[ICharacterPublicMethods, ...]] | None:
+    def finalists(self) -> tuple[tuple[ICharacter, ...], tuple[ICharacter, ...]] | None:
         """Returns the winner of the Battle"""
 
     @abstractmethod
-    def next_turn(self) -> tuple[ICharacterPublicMethods, tuple[ICharacterPublicMethods, ...]]:
+    def next_turn(self) -> tuple[ICharacter, tuple[ICharacter, ...]]:
         """Returns the next turn based on the current turn and the participants"""

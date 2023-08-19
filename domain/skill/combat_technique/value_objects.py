@@ -13,7 +13,7 @@ from .exceptions import (
 
 
 class CombatTechniqueProfile(ValueObject):
-    """Class that represents a value object of spell profile to the CharacterSpell"""
+    """Class that represents a value object of spell profile to the Spell"""
 
     def __init__(self, stamina_cost: int, damage: int, cooldown: int, loading_time: int = 0) -> None:
         if stamina_cost < 0 or stamina_cost > 100:
@@ -36,7 +36,7 @@ class CombatTechniqueProfile(ValueObject):
         self.__loading_time = copy(self.__cooldown)
         self.__just_used = True
 
-    def rest_and_prepare(self) -> None:
+    def rest(self) -> None:
         if self.__loading_time == 0:
             raise CombatTechniqueIsAlreadyReady()
         if not self.__just_used:

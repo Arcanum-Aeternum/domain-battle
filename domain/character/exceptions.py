@@ -1,14 +1,18 @@
-class ThisCharacterDoesNotHaveThatSpell(RuntimeError):
-    """Error that indicates that the character does not have the magic he tried to use"""
+class CharacterDoesNotHaveThatSkillException(RuntimeError):
+    """Error that indicates that the character does not have the skill he tried to use"""
 
 
-class ThisCharacterDoesNotHaveThatCombatTechnique(RuntimeError):
-    """Error that indicates that the character does not have the combat technique he tried to use"""
+class SkillNotAvailableException(RuntimeError):
+    """Error that indicates that the requested skill is on cooldown"""
 
 
-class CombatTechniqueNotAvailable(RuntimeError):
-    """Error that indicates that the requested combat technique is on cooldown"""
+class CantUseThisSkillToAttackException(RuntimeError):
+    """Error that indicates that the character can't use this skill to attack"""
 
 
-class SpellNotAvailable(RuntimeError):
-    """Error that indicates that the requested spell is on cooldown"""
+class NoCombatTechniqueAvailableException(RuntimeError):
+    """Error indicates that someone tried to use a combat technique that was not available"""
+
+
+class NoSpellAvailableException(RuntimeError):
+    """Error indicates that someone tried to use a spell that was not available"""

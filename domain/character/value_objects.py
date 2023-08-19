@@ -21,17 +21,17 @@ class SkillProfile(ValueObject):
     def current_mana_points(self) -> int:
         return self.__mana_points
 
-    def decrement_life_points(self, damage: int) -> None:
+    def take_damage(self, damage: int) -> None:
         if self.__life_points < damage:
             damage = self.__life_points
         self.__life_points -= damage
 
-    def decrement_stamina_points(self, stamina_spent: int) -> None:
+    def use_stamina(self, stamina_spent: int) -> None:
         if self.__stamina_points < stamina_spent:
             stamina_spent = self.__stamina_points
         self.__stamina_points -= stamina_spent
 
-    def decrement_mana_points(self, mana_spent: int) -> None:
+    def use_mana(self, mana_spent: int) -> None:
         if self.__mana_points < mana_spent:
             mana_spent = self.__mana_points
         self.__mana_points -= mana_spent
