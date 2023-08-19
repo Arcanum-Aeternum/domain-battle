@@ -1,18 +1,14 @@
-"""Module describes the CharacterSpell entity and its direct dependencies"""
+"""Module describes the Spell entity and its direct dependencies"""
 from typing import Callable
 
-from domain.interfaces import Entity, IEntityID
+from domain import Entity, IEntityID
 
-from .interfaces import (
-    ICharacterCombatTechnique,
-    ICharacterCombatTechniquePublicMethods,
-    ICombatTechniqueProfileBuilder,
-)
+from .interfaces import ICombatTechnique, ICombatTechniqueFactory, ICombatTechniqueProfileBuilder
 from .value_objects import CombatTechniqueProfile
 
 
-class CharacterCombatTechnique(Entity, ICharacterCombatTechnique, ICharacterCombatTechniquePublicMethods):
-    """Class that represents a CharacterCombatTechnique entity"""
+class CombatTechnique(Entity, ICombatTechniqueFactory, ICombatTechnique):
+    """Class that represents a CombatTechnique entity"""
 
     def __init__(self) -> None:
         raise RuntimeError("Cannot instantiate directly")
@@ -26,9 +22,9 @@ class CharacterCombatTechnique(Entity, ICharacterCombatTechnique, ICharacterComb
 
     @classmethod
     def create_new(cls, *, entity_id: IEntityID, name: str) -> ICombatTechniqueProfileBuilder:
-        new_character_spell = cls.__new__(cls)
-        new_character_spell._init(entity_id, name)
-        return _SpellProfileBuilder(new_character_spell, new_character_spell._set_combat_technique_profile)
+        new_spell = cls.__new__(cls)
+        new_spell._init(entity_id, name)
+        return _SpellProfileBuilder(new_spell, new_spell._set_combat_technique_profile)
 
     @property
     def name(self) -> str:
@@ -43,24 +39,24 @@ class CharacterCombatTechnique(Entity, ICharacterCombatTechnique, ICharacterComb
         return self.__combat_technique_profile.damage
 
     @property
-    def stamina_cost(self) -> int:
+    def cost(self) -> int:
         return self.__combat_technique_profile.stamina_cost
 
-    def apply_combat_technique(self) -> None:
+    def use(self) -> None:
         self.__combat_technique_profile.start_loading_time()
 
-    def rest_and_prepare(self) -> None:
-        self.__combat_technique_profile.rest_and_prepare()
+    def rest(self) -> None:
+        self.__combat_technique_profile.rest()
 
 
 class _SpellProfileBuilder(ICombatTechniqueProfileBuilder):
     def __init__(
         self,
-        character_spell_obj: CharacterCombatTechnique,
+        spell_obj: CombatTechnique,
         func_set_spell_profile: Callable[[CombatTechniqueProfile], None],
     ) -> None:
         self.__func_set_spell_profile = func_set_spell_profile
-        self.__character_spell_obj = character_spell_obj
+        self.__spell_obj = spell_obj
 
     def specify_combat_technique_properties(
         self,
@@ -68,7 +64,7 @@ class _SpellProfileBuilder(ICombatTechniqueProfileBuilder):
         damage: int,
         cooldown: int,
         loading_time: int = 0,
-    ) -> ICharacterCombatTechniquePublicMethods:
+    ) -> ICombatTechnique:
         spell_profile = CombatTechniqueProfile(
             stamina_cost=stamina_cost,
             damage=damage,
@@ -76,4 +72,4 @@ class _SpellProfileBuilder(ICombatTechniqueProfileBuilder):
             loading_time=loading_time,
         )
         self.__func_set_spell_profile(spell_profile)
-        return self.__character_spell_obj
+        return self.__spell_obj

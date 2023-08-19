@@ -13,7 +13,7 @@ from .exceptions import (
 
 
 class SpellProfile(ValueObject):
-    """Class that represents a value object of spell profile to the CharacterSpell"""
+    """Class that represents a value object of spell profile to the Spell"""
 
     def __init__(self, mana_cost: int, damage: int, cooldown: int, loading_time: int = 0) -> None:
         if mana_cost < 0 or mana_cost > 100:
