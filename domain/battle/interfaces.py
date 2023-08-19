@@ -3,7 +3,7 @@ from typing import Callable
 
 from domain import EventDispatcher, IEntityID
 
-from .value_objects import IBattleAllies, IBattleAlliesBuilder, PassTurnAlgorithmEnum, IMoveBuilder
+from .value_objects import IBattleAllies, IBattleAlliesBuilder, IMoveBuilder, PassTurnAlgorithmEnum
 
 
 class IBattle(metaclass=ABCMeta):
